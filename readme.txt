@@ -15,3 +15,5 @@ posix ipc python module has some quirks but usable (for e.g. queue notifications
  This is a demo to show python can access C shared memory and message queue. First
  attempt to creating a seamless C shared memory data to web.
  Good e.g to demonstrate using SHM and message queues between C and python.
+
+ Front end plans to use plotly.js/chart.js for plotting streamed data
