@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="x-ua-compatible" content="ie=edge">
+        <title></title>
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css') }}">
+        <!-- Place favicon.ico in the root directory -->
+    </head>
+    <body>
+        <!--[if lt IE 8]>
+            <p class="browserupgrade">You are using an <strong>outdated</strong> browser. Please <a href="http://browsehappy.com/">upgrade your browser</a> to improve your experience.</p>
+        <![endif]-->
+
+        <!-- Add your site or application content here -->
+        <div class="jumbotron">
+          <div class="container">
+            <h1>VBOX 4</h1>
+            <p>Demo SHM</p>
+          </div>
+        </div>
+
+		<div id="position"></div>
+
+        <script src="{{ url_for('static', filename='js/jquery-1.12.0.js') }}"></script>
+        <script>window.jQuery || document.write('<script src="js/vendor/jquery-1.12.0.min.js"><\/script>')</script>
+        <script src="{{ url_for('static', filename='js/bootstrap.min.js') }}"></script>
+        <script src="{{ url_for('static', filename='js/Chart.min.js') }}"></script>
+        <script src="{{ url_for('static', filename='js/plotly-latest.min.js') }}"></script>
+        <script src="{{ url_for('static', filename='js/socket.io.js') }}"></script>
+        <script>
+          $(document).ready(function() {
+            
+			i=0;
+			
+			var plotDiv = document.getElementById('position');
+			//var data = [{x:[i], y1:[0], y2:[0], y3[0]}];
+			//Plotly.newPlot(plotDiv, data, { title: 'Position Over Time'}); 
+			
+            // Function to update the page with the latest thing state.
+            function updateChart(latitude, longitude, altitude) {
+				console.log("i=" + i + "data" + latitude + " " + longitude + " " + altitude)
+				//var new_pos = [{x:[i], y1:[latitude], y2:[longitude], y3[altitude]}];
+               //Plotly.extendTraces(plotDiv, new_pos, [0], 10);
+			
+            }
+
+            // Create SocketIO connect and attach handlers for events from the server.
+            var socket = io.connect();
+            socket.on('shm_change', function(e) {
+              updateChart(e.lon, e.lat, e.alt);
+            });
+            
+			socket.on('eep_change', function(e) {
+              i = e.eep;
+			 
+            })
+          });
+        </script>
+    </body>
+</html>
