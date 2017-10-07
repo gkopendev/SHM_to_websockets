@@ -25,11 +25,11 @@ locked_memory = posix_ipc.SharedMemory('/eeprom_shm', posix_ipc.O_CREAT , size=4
 locked_mapmem = mmap.mmap(locked_memory.fd, locked_memory.size)
 #close fd as we will use mmap to access memory rather than file descriptor
 locked_memory.close_fd()
+e = struct.Struct('i')	#eeprom_shm layout
 
 semaphore = posix_ipc.Semaphore('/eeprom_sem', posix_ipc.O_CREAT)
-
 # now just use semaphore.acquire() and semaphore.release()
-e = struct.Struct('i')	#eeprom_shm layout
+
 
 #open flask app
 app = Flask(__name__)
@@ -60,7 +60,7 @@ def watch_posix_q():
 			message, priority = mq.receive(0)
 			mq_handler(message)
 		except:
-			time.sleep(0.001)
+			time.sleep(0.001) #necessary else this eventlet thread will not allow flask eventlet thread to run
 t = threading.Thread(target=watch_posix_q)
 t.start()
 
