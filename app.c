@@ -17,17 +17,19 @@
 #include <sys/timerfd.h>
 
 #include <sys/stat.h> 	/* For mode constants */
-#include <fcntl.h> 		/* For O_* constants */
+#include <fcntl.h> 	/* For O_* constants */
 
 /******************************************************************************/
 /*
 	Create semlocked and lockfree SHM which can be accessed from Python or other 
 	C apps (and cleanup)
 */
-void cleanup_channels_shm(void); // func prototype
-void cleanup_eeprom_shm(void);	// func prototype
-void mq_to_py(void);			// func prototype
+// func prototypes
+void cleanup_channels_shm(void); 
+void cleanup_eeprom_shm(void);
+void mq_to_py(void);
 
+// shm layout
 struct channels_shm {
 	float longitude;
 	float latitude;
@@ -218,7 +220,7 @@ int add_timer_epoll(void)
 	never trigger(expire)! So set it to a token first expiry duration(usually same as 
 	it_interval)
 	*/
-	timeout.it_value.tv_sec = 15;  
+	timeout.it_value.tv_sec = 15;  //make sure SHM's, queue is created before invoking app.py
 	timeout.it_value.tv_nsec = 0; 
 	timeout.it_interval.tv_sec = 0;
 	timeout.it_interval.tv_nsec = 10 * 1000 * 1000;
@@ -260,8 +262,8 @@ static void timer_handler(uint32_t revents)
 		unlock_eeprom_shm();
 		
 		printf(" %d - %f %f %f \n", e, p_channels_shm->longitude, 
-							p_channels_shm->latitude, 
-							p_channels_shm->altitude);
+					p_channels_shm->latitude, 
+					p_channels_shm->altitude);
 							
 		e++;
 		mq_to_py();
@@ -336,6 +338,7 @@ void main()
 	// cleanup shm's
 	cleanup_channels_shm();
 	cleanup_eeprom_shm();
+	// cleanup queue
 	mq_close(mq_fd);
 	mq_unlink("/PY_MQ");
 }
