@@ -301,7 +301,7 @@ void main()
 	
 	// Create epoll watcher, but make sure children dont steal them 
 	if (-1 == (epoll_fd = epoll_create1(EPOLL_CLOEXEC)))
-		printf("Epoll errno %m", errno);
+		printf("Epoll err %s", strerror(errno));
 	
 	if (add_signal_fd_epoll() < 0)
 		printf("Signal fd error \n");
