@@ -285,7 +285,7 @@ int connect_py_q(void)
 
 void mq_to_py(void)
 {
-	uint32_t signal = 1;
+	uint32_t signal = 0;
 	if (mq_fd > 0)
 	mq_send(mq_fd, (char *)&signal, 4, 0);
 }

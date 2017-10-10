@@ -10,46 +10,59 @@ from flask_socketio import SocketIO
 import eventlet
 eventlet.monkey_patch()
 import threading
+from configparser import *
 
-#same memory C apps can write to
-memory = posix_ipc.SharedMemory('/channels_shm', posix_ipc.O_CREAT , size=1024) 
-#map that memory to use it
-mapmem = mmap.mmap(memory.fd, memory.size)
-#close fd as we will use mmap to access memory rather than file descriptor
-memory.close_fd()
-s = struct.Struct('f f f')	#channels_shm layout
+class shm_mem:
+	def __init__(self, mem, mem_size, mem_lock, dict, layout):
+		self.memory = posix_ipc.SharedMemory(mem, posix_ipc.O_CREAT ,size=int(mem_size))
+		self.mapmem = mmap.mmap(self.memory.fd, self.memory.size)
+		self.memory.close_fd()
+		self.s = struct.Struct(layout)
+		if mem_lock == "0":
+			self.lock = 0
+		else:
+			self.lock = posix_ipc.Semaphore(mem_lock, posix_ipc.O_CREAT)
+		self.keys = [dict.split()]
 
-#same memory C apps can write to
-locked_memory = posix_ipc.SharedMemory('/eeprom_shm', posix_ipc.O_CREAT , size=4096) 
-#map that memory to use it
-locked_mapmem = mmap.mmap(locked_memory.fd, locked_memory.size)
-#close fd as we will use mmap to access memory rather than file descriptor
-locked_memory.close_fd()
-e = struct.Struct('i')	#eeprom_shm layout
+	def read(self):
+		if self.lock != 0:
+			self.lock.acquire()
+			values = self.s.unpack(self.mapmem[:self.s.size])
+			d = dict(zip(self.keys, values))
+			self.lock.release()
+			return d
+		else:
+			values = self.s.unpack(self.mapmem[:self.s.size])
+			print(self.keys)
+			print(values)
+			d = dict(zip(self.keys, values))
+			return d
+			
+	def close(self):
+		self.mapmem.close()	
+		
+shm_mems = []
+config = ConfigParser()
+config.optionxform = str
+config_file = open("./config.txt", "r")
+config.read_file(config_file)
+for section in config.sections():
+	s = shm_mem(config.get(section, 'name'), config.get(section, 'size'), config.get(section, 'lock'), config.get(section, 'dict'), config.get(section, 'layout'))
+	shm_mems.append(s)
 
-semaphore = posix_ipc.Semaphore('/eeprom_sem', posix_ipc.O_CREAT)
-# now just use semaphore.acquire() and semaphore.release()
 
-
-#open flask app
-app = Flask(__name__)
-socketio = SocketIO(app)
 
 mq = posix_ipc.MessageQueue('/PY_MQ', posix_ipc.O_CREAT, max_message_size=64)
 #Any process including C apps can send message on this
 def mq_handler(message):
 	m = struct.Struct('I') # data structure for message received
 	i, =  m.unpack(message[:m.size])
-	if i == 1 :
-		lon, lat, alt = s.unpack(mapmem[:s.size])
-		socketio.emit('shm_change', { 'lon': lon, 'lat': lat, 'alt': alt })
-		semaphore.acquire()
-		eep_test, = e.unpack(locked_mapmem[:e.size])
-		semaphore.release()
-		socketio.emit('eep_change', {'eep': eep_test})
-		print("Ding! %d" % (eep_test))
+	if i < len(shm_mems):
+		mem = shm_mems[i].read()
+		print(mem)
 	else:
-		print("no", i)
+		print("out of list")
+
 
 #wait for messages on queue
 def watch_posix_q():
@@ -64,6 +77,10 @@ def watch_posix_q():
 t = threading.Thread(target=watch_posix_q)
 t.start()
 
+#open flask app
+app = Flask(__name__)
+socketio = SocketIO(app)
+
 @app.route("/")
 def index():
 	return render_template('index.html')
@@ -76,11 +93,8 @@ if __name__ == '__main__':
 	t.join() 
 	
 	#cleanup channels shm
-	mapmem.close()
-	
-	#cleanup eeprom shm and it's semaphore
-	locked_mapmem.close()
+	for m in shm_mems:
+		m.close()
 
 	#cleanup ipc message queue
 	mq.close()
-
