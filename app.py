@@ -13,7 +13,8 @@ import threading
 from configparser import *
 
 class shm_mem:
-	def __init__(self, mem, mem_size, mem_lock, dict, layout):
+	def __init__(self, mem, mem_size, mem_lock, dict, layout, mq_id):
+		self.name = mem
 		self.memory = posix_ipc.SharedMemory(mem, posix_ipc.O_CREAT ,size=int(mem_size))
 		self.mapmem = mmap.mmap(self.memory.fd, self.memory.size)
 		self.memory.close_fd()
@@ -22,7 +23,8 @@ class shm_mem:
 			self.lock = 0
 		else:
 			self.lock = posix_ipc.Semaphore(mem_lock, posix_ipc.O_CREAT)
-		self.keys = [dict.split()]
+		self.keys = dict.split()
+		self.mq_id = int(mq_id)
 
 	def read(self):
 		if self.lock != 0:
@@ -33,8 +35,6 @@ class shm_mem:
 			return d
 		else:
 			values = self.s.unpack(self.mapmem[:self.s.size])
-			print(self.keys)
-			print(values)
 			d = dict(zip(self.keys, values))
 			return d
 			
@@ -47,7 +47,7 @@ config.optionxform = str
 config_file = open("./config.txt", "r")
 config.read_file(config_file)
 for section in config.sections():
-	s = shm_mem(config.get(section, 'name'), config.get(section, 'size'), config.get(section, 'lock'), config.get(section, 'dict'), config.get(section, 'layout'))
+	s = shm_mem(config.get(section, 'name'), config.get(section, 'size'), config.get(section, 'lock'), config.get(section, 'dict'), config.get(section, 'layout'), config.get(section, 'mq_msg_id'))
 	shm_mems.append(s)
 
 
@@ -57,11 +57,11 @@ mq = posix_ipc.MessageQueue('/PY_MQ', posix_ipc.O_CREAT, max_message_size=64)
 def mq_handler(message):
 	m = struct.Struct('I') # data structure for message received
 	i, =  m.unpack(message[:m.size])
-	if i < len(shm_mems):
-		mem = shm_mems[i].read()
-		print(mem)
-	else:
-		print("out of list")
+	for mem in shm_mems:
+		if i == mem.mq_id:
+			val = mem.read()
+			socketio.emit(mem.name, val)
+			break
 
 
 #wait for messages on queue

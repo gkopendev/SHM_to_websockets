@@ -1,12 +1,13 @@
-# Use this to get variable names and create dicts. Will be easier to convert
-# them to json and retrieve.
+# Each shm's variables and value are used to create a dictionary and socketio
+# emitted when a message with corresponding mq_msg_id is received. Socketio is
+# emitted with same name as SHM.
 # Layout is assumed contiguous and if elements add up to less than size, the
 # remaining bytes are ignored(i.e. bytes not mapped are ignored)
 
 [SHM1]
 name = /channels_shm
 size = 1024
-mq_msg_id = 1
+mq_msg_id = 0
 lock = 0
 dict = longitude latitude altitude
 layout = f f f
@@ -14,7 +15,7 @@ layout = f f f
 [SHM2]
 name = /eeprom_shm
 size = 1024
-mq_msg_id = 2
+mq_msg_id = 1
 lock = /eeprom_sem
 dict = eep_test
 layout = i

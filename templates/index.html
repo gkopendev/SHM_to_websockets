@@ -49,11 +49,11 @@
 
             // Create SocketIO connect and attach handlers for events from the server.
             var socket = io.connect();
-            socket.on('shm_change', function(e) {
-              updateChart(e.lon, e.lat, e.alt);
+            socket.on('/channels_shm', function(e) {
+              updateChart(e.longitude, e.latitude, e.altitude);
             });
             
-			socket.on('eep_change', function(e) {
+			socket.on('/eeprom_shm', function(e) {
               i = e.eep;
 			 
             })
