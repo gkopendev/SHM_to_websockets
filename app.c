@@ -28,7 +28,7 @@
 // func prototypes
 void cleanup_channels_shm(void); 
 void cleanup_eeprom_shm(void);
-void mq_to_py(void);
+void mq_to_py(uint32_t);
 
 // shm layout
 struct channels_shm {
@@ -257,7 +257,7 @@ static void timer_handler(uint32_t revents)
 		p_channels_shm->longitude= x + (rand() % 5)/1000.0 ;
 		p_channels_shm->latitude = y + (rand() % 5)/1000.0 ;
 		p_channels_shm->altitude = z + (rand() % 5)/1000.0 ;
-		
+		mq_to_py(0);
 		lock_eeprom_shm();
 		p_eeprom_shm->eep_test = e;
 		unlock_eeprom_shm();
@@ -267,7 +267,7 @@ static void timer_handler(uint32_t revents)
 					p_channels_shm->altitude);
 							
 		e++;
-		mq_to_py();
+		mq_to_py(1);
 	}
 }
 
@@ -283,11 +283,10 @@ int connect_py_q(void)
 	return mq_fd;
 }
 
-void mq_to_py(void)
+void mq_to_py(uint32_t signal)
 {
-	uint32_t signal = 0;
 	if (mq_fd > 0)
-	mq_send(mq_fd, (char *)&signal, 4, 0);
+		mq_send(mq_fd, (char *)&signal, 4, 0);
 }
 /******************************************************************************/
 
